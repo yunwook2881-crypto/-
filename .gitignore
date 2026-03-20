@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+credentials.json
+channels/*/projects/
+.DS_Store

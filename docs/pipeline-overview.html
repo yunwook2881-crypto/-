@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>야담 유튜브 대본 파이프라인</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Pretendard',-apple-system,sans-serif;background:#0a0a0a;color:#e0e0e0;overflow:hidden;height:100vh;user-select:none}
+  .top-bar{position:fixed;top:0;left:0;right:0;z-index:100;height:52px;background:#111;border-bottom:1px solid #222;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+  .top-bar h1{font-size:.95rem;color:#fff;font-weight:600}
+  .top-bar .legend{display:flex;gap:14px;font-size:.7rem;color:#777}
+  .legend-dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:3px;vertical-align:middle}
+  .canvas-wrap{position:fixed;top:52px;left:0;right:0;bottom:0;overflow:hidden;cursor:grab}
+  .canvas-wrap:active{cursor:grabbing}
+  .canvas{position:absolute;transform-origin:0 0;will-change:transform}
+  .zoom-controls{position:fixed;bottom:20px;right:20px;z-index:100;display:flex;flex-direction:column;gap:3px}
+  .zoom-btn{width:36px;height:36px;border-radius:8px;background:#222;border:1px solid #333;color:#ccc;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .zoom-btn:hover{background:#333;color:#fff}
+  .zoom-label{text-align:center;font-size:.6rem;color:#555;margin-top:2px}
+  .hint{position:fixed;bottom:20px;left:20px;z-index:100;font-size:.7rem;color:#444}
+  .card{position:absolute;border-radius:14px;cursor:pointer;transition:transform .12s,box-shadow .12s;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .card:hover{transform:scale(1.05);box-shadow:0 0 24px rgba(255,255,255,.06);z-index:10}
+  .card-step{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;opacity:.5}
+  .card-title{font-size:16px;font-weight:800;margin-bottom:3px;line-height:1.2}
+  .card-sub{font-size:10px;opacity:.6;max-width:130px;line-height:1.4}
+  .card-badge{margin-top:8px;font-size:9px;padding:2px 8px;border-radius:16px;font-weight:700}
+  .card-start{background:linear-gradient(135deg,#1a1a1a,#252525);border:1px solid #444;width:150px;height:110px}
+  .card-python{background:linear-gradient(135deg,#064e3b,#065f46);border:1px solid #10b98140;width:160px;height:130px}
+  .card-sonnet{background:linear-gradient(135deg,#1e1b4b,#312e81);border:1px solid #6366f140;width:160px;height:130px}
+  .card-opus{background:linear-gradient(135deg,#2d1b69,#4c1d95);border:1px solid #8b5cf640;width:180px;height:150px}
+  .card-pd{background:linear-gradient(135deg,#3b0764,#581c87);border:1px solid #a855f740;width:160px;height:130px}
+  .card-output{background:linear-gradient(135deg,#14532d,#166534);border:2px solid #22c55e60;width:160px;height:120px}
+  .badge-s{background:#06b6d418;color:#22d3ee;border:1px solid #06b6d435}
+  .badge-o{background:#f59e0b18;color:#fbbf24;border:1px solid #f59e0b35}
+  .badge-py{background:#10b98118;color:#34d399;border:1px solid #10b98135}
+  .badge-pd{background:#a855f718;color:#c084fc;border:1px solid #a855f735}
+  .genre-zone{position:absolute;border:1.5px dashed #f59e0b35;border-radius:20px;background:#f59e0b06}
+  .genre-zone-label{position:absolute;top:-12px;left:20px;font-size:10px;font-weight:700;color:#f59e0b;background:#0a0a0a;padding:2px 10px;border-radius:8px;letter-spacing:.5px}
+  .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+  .modal-overlay.active{display:flex}
+  .modal{background:#1a1a1a;border:1px solid #333;border-radius:18px;max-width:520px;width:92%;max-height:80vh;overflow-y:auto;padding:28px;position:relative}
+  .modal-close{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:8px;background:#333;border:none;color:#aaa;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .modal-close:hover{background:#444;color:#fff}
+  .modal h2{font-size:1.2rem;color:#fff;margin-bottom:4px}
+  .modal .mt{font-size:.75rem;margin-bottom:14px}
+  .modal .mt span{padding:3px 10px;border-radius:16px;font-weight:700;font-size:.65rem}
+  .ms{margin-bottom:14px}
+  .ms h3{font-size:.7rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;border-bottom:1px solid #252525;padding-bottom:3px}
+  .ms p,.ms ul{font-size:.82rem;color:#bbb;line-height:1.55}
+  .ms ul{padding-left:16px}
+  .ms li{margin-bottom:3px}
+  .ms code{background:#282828;padding:1px 5px;border-radius:3px;font-size:.75rem;color:#ddd}
+  .pbox{background:#f59e0b0d;border:1px solid #f59e0b25;border-radius:8px;padding:10px 12px;margin-top:10px}
+  .pbox h4{font-size:.7rem;color:#f59e0b;font-weight:700;margin-bottom:3px}
+  .pbox p{font-size:.78rem;color:#c99a30}
+  .gbox{background:#f59e0b0a;border:1px solid #f59e0b20;border-radius:8px;padding:10px 12px;margin-top:8px}
+  .gbox h4{font-size:.7rem;color:#fbbf24;font-weight:700;margin-bottom:3px}
+  .gbox p{font-size:.78rem;color:#d4a94a}
+  .bbox{background:#10b9810d;border:1px solid #10b98125;border-radius:8px;padding:10px 12px;margin-top:8px}
+  .bbox h4{font-size:.7rem;color:#34d399;font-weight:700;margin-bottom:3px}
+  .bbox p{font-size:.78rem;color:#6ee7b7}
+  .trow{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+  .ttag{font-size:.6rem;padding:2px 6px;background:#2a2a2a;border-radius:3px;color:#999}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <h1>야담(野談) 유튜브 대본 파이프라인</h1>
+  <div class="legend">
+    <span><span class="legend-dot" style="background:#10b981"></span>Python</span>
+    <span><span class="legend-dot" style="background:#6366f1"></span>Sonnet</span>
+    <span><span class="legend-dot" style="background:#8b5cf6"></span>Opus</span>
+    <span><span class="legend-dot" style="background:#a855f7"></span>PD 직접</span>
+    <span><span class="legend-dot" style="background:#f59e0b"></span>야담 가이드</span>
+  </div>
+</div>
+<div class="canvas-wrap" id="canvasWrap">
+  <div class="canvas" id="canvas">
+    <svg class="connectors" width="2400" height="600" id="svg"></svg>
+    <!-- 야담 가이드 적용 구간 -->
+    <div class="genre-zone" style="left:680px;top:130px;width:1270px;height:380px">
+      <div class="genre-zone-label">야담 전문 가이드 적용 구간 (prompts/genres/야담설화.md §1~§6)</div>
+    </div>
+    <!-- START -->
+    <div class="card card-start" style="left:40px;top:260px" data-m="start">
+      <div class="card-title" style="font-size:14px">사용자 입력</div>
+      <div class="card-sub">"영상 만들어줘"<br>+ URL 필수</div>
+    </div>
+    <!-- COLLECT -->
+    <div class="card card-python" style="left:230px;top:250px" data-m="collect">
+      <div class="card-step">Step 1</div>
+      <div class="card-title">COLLECT</div>
+      <div class="card-sub">레퍼런스 수집</div>
+      <div class="card-badge badge-py">Python</div>
+    </div>
+    <!-- ANALYZE -->
+    <div class="card card-sonnet" style="left:420px;top:250px" data-m="analyze">
+      <div class="card-step">Step 2</div>
+      <div class="card-title">ANALYZE</div>
+      <div class="card-sub">레퍼런스 분석</div>
+      <div class="card-badge badge-s">Sonnet</div>
+    </div>
+    <!-- DATA_PREP -->
+    <div class="card card-sonnet" style="left:830px;top:250px" data-m="researcher">
+      <div class="card-step">Step 3</div>
+      <div class="card-title" style="font-size:14px">DATA<br>PREP</div>
+      <div class="card-sub">야담 배경 리서치<br>(팩트체크 없음)</div>
+      <div class="card-badge badge-s">Sonnet</div>
+    </div>
+    <!-- STRATEGY -->
+    <div class="card card-opus" style="left:1040px;top:235px" data-m="strategy">
+      <div class="card-step">Step 4</div>
+      <div class="card-title">STRATEGY</div>
+      <div class="card-sub">컨셉 · CTR · 훅<br>썸네일 프롬프트</div>
+      <div class="card-badge badge-o">Opus</div>
+    </div>
+    <!-- OUTLINE -->
+    <div class="card card-pd" style="left:1270px;top:250px" data-m="outline">
+      <div class="card-step">Step 5</div>
+      <div class="card-title">OUTLINE</div>
+      <div class="card-sub">통합 기획서</div>
+      <div class="card-badge badge-pd">PD 직접</div>
+    </div>
+    <!-- DRAFT -->
+    <div class="card card-opus" style="left:1480px;top:235px" data-m="draft">
+      <div class="card-step">Step 6</div>
+      <div class="card-title">DRAFT</div>
+      <div class="card-sub">대본 초안<br>파트별 병렬</div>
+      <div class="card-badge badge-o">Opus</div>
+    </div>
+    <!-- REVIEW -->
+    <div class="card card-opus" style="left:1710px;top:235px" data-m="review">
+      <div class="card-step">Step 7</div>
+      <div class="card-title">REVIEW</div>
+      <div class="card-sub">검수 + 확정<br>verdict 판단</div>
+      <div class="card-badge badge-o">Opus</div>
+    </div>
+    <!-- YOUTUBE_META -->
+    <div class="card card-pd" style="left:1940px;top:250px" data-m="meta">
+      <div class="card-step">Step 8</div>
+      <div class="card-title" style="font-size:13px">YOUTUBE<br>META</div>
+      <div class="card-sub">업로드 메타</div>
+      <div class="card-badge badge-pd">PD 직접</div>
+    </div>
+    <!-- DONE -->
+    <div class="card card-output" style="left:2150px;top:255px" data-m="done">
+      <div class="card-title" style="font-size:15px">DONE</div>
+      <div class="card-sub" style="max-width:140px;font-size:9px">script.txt<br>prompts.json<br>youtube.md</div>
+    </div>
+  </div>
+</div>
+<div class="zoom-controls">
+  <button class="zoom-btn" onclick="zoomIn()">+</button>
+  <button class="zoom-btn" onclick="zoomOut()">−</button>
+  <button class="zoom-btn" onclick="zoomFit()" style="font-size:.65rem">FIT</button>
+  <div class="zoom-label" id="zl">100%</div>
+</div>
+<div class="hint">드래그 이동 · 스크롤 줌 · 카드 클릭 → 상세</div>
+<div class="modal-overlay" id="mo">
+  <div class="modal" id="mc">
+    <button class="modal-close" onclick="cm()">✕</button>
+    <div id="mb"></div>
+  </div>
+</div>
+<script>
+const M={
+start:{t:'사용자 입력',tp:'',tc:'',b:`
+<div class="ms"><h3>사용법</h3><ul>
+<li>"이거 참고해서 영상 만들어줘" + YouTube URL</li>
+<li>"이거 참고해서 장희빈 야담 만들어줘" + URL</li></ul>
+<p style="margin-top:8px;color:#f87171;font-size:.8rem;font-weight:600">레퍼런스 URL 필수. 없으면 요청합니다.</p></div>
+<div class="pbox"><h4>사용자가 미리 설정할 것</h4>
+<p><code>config/profile.md</code> — 야담 프리셋 복사<br>
+<code>config/settings.json</code> — 채널 이름<br>
+<code>config/workflow.json</code> — ask/auto 모드</p></div>
+<div class="ms" style="margin-top:14px"><h3>야담 전문 가이드 (자동 로드)</h3>
+<p><code>prompts/genres/야담설화.md</code>가 각 단계에서 자동 참조됩니다:</p>
+<ul><li>§1 리서치 방향 — 원전, 시대고증, 풍속, 지리, 이본</li>
+<li>§2 서사 구조 — 계절도입형, 사건직입형, 액자형, 병렬형</li>
+<li>§3 Hook 패턴 — 시간+장소, 결론선행, 질문형, 대사선행</li>
+<li>§4 문체 규칙 — 서술체, 고어체, 오감묘사, 대화, 속도감</li>
+<li>§5 리텐션 장치 — 복선, 오픈루프, 감정전환, 이본, 직접인용</li>
+<li>§6 검수 체크리스트 — 서사완결성, 분위기, 고증, 리텐션, TTS</li></ul></div>`},
+collect:{t:'COLLECT — 레퍼런스 수집',tp:'Python · collect.py',tc:'badge-py',b:`
+<div class="ms"><h3>역할</h3><p>yt-dlp로 YouTube 영상의 메타/자막/썸네일을 다운로드</p></div>
+<div class="ms"><h3>실행</h3><p><code>.venv/bin/python scripts/collect.py --project {프로젝트} --channel "{채널}" URL</code></p></div>
+<div class="ms"><h3>출력</h3><ul>
+<li><code>_refs/{NNN}/meta.md</code> — 제목, 조회수, 좋아요, 댓글</li>
+<li><code>_refs/{NNN}/transcript.txt</code> — 자막 전문</li>
+<li><code>_refs/{NNN}/thumbnail.webp</code> — 썸네일</li></ul></div>`},
+analyze:{t:'ANALYZE — 레퍼런스 분석',tp:'video-analyst · Sonnet',tc:'badge-s',b:`
+<div class="ms"><h3>역할</h3><p>"이 영상이 <b>왜 터졌는지</b>" 역설계. 7개 항목 분석.</p></div>
+<div class="ms"><h3>분석 7항목</h3><ul>
+<li>주제 요약</li><li>썸네일 & 제목 분석</li><li>훅 & 인트로</li>
+<li>본문 구조</li><li>감정 트리거</li><li>댓글 반응</li><li>핵심약속 역추적</li></ul></div>
+<div class="ms"><h3>도구</h3><div class="trow"><span class="ttag">Read</span><span class="ttag">Write</span><span class="ttag">Glob</span></div></div>
+<div class="ms"><h3>출력</h3><p><code>_refs/{NNN}/analysis.md</code></p></div>
+<div class="pbox"><h4>profile.md 영향</h4><p>장르 · 톤앤매너 → 분석 관점</p></div>`},
+researcher:{t:'DATA PREP — 야담 배경 리서치',tp:'data-researcher · Sonnet',tc:'badge-s',b:`
+<div class="ms"><h3>역할</h3><p>야담 장르에 맞는 <b>배경 리서치만</b> 수행. 팩트체크 없음.</p></div>
+<div class="ms"><h3>도구</h3><div class="trow"><span class="ttag">Read</span><span class="ttag">Write</span><span class="ttag">Glob</span><span class="ttag">WebSearch</span><span class="ttag">WebFetch</span></div></div>
+<div class="ms"><h3>출력</h3><p><code>_script/verified-data.md</code> (리서치 데이터만, factcheck.md 없음)</p></div>
+<div class="gbox"><h4>야담 가이드 §1 리서치 방향</h4>
+<p>원전 확인 (어우야담, 청구야담 등) · 시대 고증 (관직, 복식, 화폐, 이동수단) · 풍속/문화 · 지리/지명 · 이본 비교</p></div>
+<div class="pbox"><h4>profile.md 영향</h4><p>리서치 지침 → 조사 방향</p></div>`},
+strategy:{t:'STRATEGY — 크리에이티브 전략',tp:'strategist · Opus',tc:'badge-o',b:`
+<div class="ms"><h3>역할</h3><p>5-Phase 크리에이티브 설계. 컨셉 3개 → 자체 평가 → 확정 + 썸네일 프롬프트.</p>
+<p style="margin-top:6px;color:#fbbf24;font-weight:600">ask 모드에서 유일한 사용자 개입 지점</p></div>
+<div class="ms"><h3>5 Phases</h3><ul>
+<li><b>1.</b> 컨셉 설계 (앵글 + 핵심약속 + 서사유형 + 감정전략) × 3</li>
+<li><b>2.</b> CTR 패키지 (제목 + 썸네일 텍스트) × 3</li>
+<li><b>3.</b> Hook & Intro × 3</li>
+<li><b>4.</b> 자체 평가 → auto: 확정 / ask: 추천</li>
+<li><b>5.</b> 썸네일 이미지 프롬프트 5개</li></ul></div>
+<div class="ms"><h3>출력</h3><ul>
+<li><code>concept.md</code></li><li><code>hook-intro.md</code></li><li><code>prompts.json</code></li></ul></div>
+<div class="gbox"><h4>야담 가이드 §3 Hook 패턴</h4><p>시간+장소, 결론선행, 질문형, 대사선행, 원전인용 등 야담 전용 Hook 레퍼런스</p></div>
+<div class="pbox"><h4>profile.md 영향</h4><p>톤 · 타겟 시청자 · 스토리텔링 → 전략 방향</p></div>`},
+outline:{t:'OUTLINE — 통합 기획서',tp:'PD 직접 수행',tc:'badge-pd',b:`
+<div class="ms"><h3>역할</h3><p>에이전트 없이 PD가 직접 대본 뼈대 설계. 셀프체크 9항목 내장.</p></div>
+<div class="ms"><h3>셀프체크</h3><ul>
+<li>제목→구조 정합성</li><li>감정 전략</li><li>완시율 설계</li><li>핵심약속 이행</li>
+<li>스테이크 상승</li><li>재참여 포인트 (2~3분)</li><li>데이터 검증</li><li>분량 현실성</li><li>작성 가능성</li></ul></div>
+<div class="ms"><h3>출력</h3><p><code>outline.md</code> → 자동으로 DRAFT 진행</p></div>
+<div class="gbox"><h4>야담 가이드 §2 서사 구조 + §5 리텐션</h4><p>계절도입형/사건직입형/액자형/병렬형 서사 구조 + 복선·오픈루프·감정전환·이본·직접인용 리텐션 장치</p></div>
+<div class="pbox"><h4>profile.md 영향</h4><p>러닝타임 가이드 → 타겟 러닝타임</p></div>`},
+draft:{t:'DRAFT — 대본 초안',tp:'script-writer · Opus × 파트 수',tc:'badge-o',b:`
+<div class="ms"><h3>역할</h3><p>outline.md 파트별 에이전트 1개씩 <b>병렬 집필</b>. Hook 제외 (자동 삽입).</p></div>
+<div class="ms"><h3>작성 규칙</h3><ul>
+<li>profile.md 말투/톤 준수</li><li>verified-data.md 데이터만 사용</li>
+<li>목표 글자수 충족</li><li>한 문장 숫자 3개 금지</li></ul></div>
+<div class="ms"><h3>병합 + 검증</h3><ul>
+<li><code>merge_draft.py</code> — 파트 병합 → draft.md</li>
+<li><code>validate_draft.py</code> — 분량 ≥ 90% 검증</li></ul></div>
+<div class="ms"><h3>출력</h3><p><code>draft.md</code></p></div>
+<div class="gbox"><h4>야담 가이드 §4 문체 + §5 리텐션</h4><p>서술체 · 고어체 가미 · 오감묘사 · 대화 직접인용 · 속도감 조절</p></div>
+<div class="pbox"><h4>profile.md 영향</h4><p>톤 · 말투 · 스토리텔링 → 글쓰기 스타일</p></div>`},
+review:{t:'REVIEW — 검수 + 확정',tp:'script-reviewer · Opus',tc:'badge-o',b:`
+<div class="ms"><h3>역할</h3><p>구조/문체/톤/<b>고증</b> 검수 + verdict 판단. 팩트체크 없음.</p></div>
+<div class="ms"><h3>검수 항목</h3><ul>
+<li><b>핵심약속</b> — Hook 이행, 파트 기여, 완결</li>
+<li><b>구조</b> — outline 일치, 러닝타임, 리텐션</li>
+<li><b>문체</b> — 쉼표, 쉬운말, 숫자 과밀</li>
+<li><b>톤</b> — profile.md 준수</li>
+<li><b>야담 고증</b> — 시대배경, 관직, 복식, 풍속 정합성</li></ul></div>
+<div class="ms"><h3>Verdict</h3>
+<p>치명적 1건+ → <span style="color:#f87171;font-weight:700">수정</span> (최대 1회 리비전)<br>
+치명적 0건 → <span style="color:#34d399;font-weight:700">통과</span> → <code>script.txt</code></p></div>
+<div class="gbox"><h4>야담 가이드 §6 검수 체크리스트</h4><p>서사완결성 · 분위기/톤 · 고증 정확성 · 리텐션 배치 · TTS 적합성</p></div>
+<div class="pbox"><h4>profile.md 영향</h4><p>톤 · 말투 → 검수 기준</p></div>`},
+meta:{t:'YOUTUBE META',tp:'PD 직접 수행',tc:'badge-pd',b:`
+<div class="ms"><h3>역할</h3><p>유튜브 업로드용 메타데이터 생성</p></div>
+<div class="ms"><h3>출력 내용</h3><ul>
+<li>제목 (40~70자)</li><li>설명글</li><li>태그</li><li>고정 댓글</li></ul></div>
+<div class="ms"><h3>출력</h3><p><code>output/youtube.md</code></p></div>`},
+done:{t:'완료 — 최종 산출물',tp:'',tc:'',b:`
+<div class="ms"><h3>최종 산출물</h3><ul>
+<li><code>_script/script.txt</code> — 완성 대본 (TTS 바로 사용)</li>
+<li><code>output/thumbnails/prompts.json</code> — 썸네일 프롬프트 5개</li>
+<li><code>output/youtube.md</code> — 업로드 메타</li></ul></div>`}
+};
+function om(k){const d=M[k];if(!d)return;let h=`<h2>${d.t}</h2>`;if(d.tp)h+=`<div class="mt"><span class="${d.tc}">${d.tp}</span></div>`;h+=d.b;document.getElementById('mb').innerHTML=h;document.getElementById('mo').classList.add('active')}
+function cm(){document.getElementById('mo').classList.remove('active')}
+document.getElementById('mo').addEventListener('click',e=>{if(e.target===e.currentTarget)cm()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')cm()});
+document.querySelectorAll('.card[data-m]').forEach(c=>{c.addEventListener('click',e=>{e.stopPropagation();om(c.dataset.m)})});
+const W=document.getElementById('canvasWrap'),C=document.getElementById('canvas');
+let s=1,px=0,py=0,ip=false,sx,sy;
+function at(){C.style.transform=`translate(${px}px,${py}px) scale(${s})`;document.getElementById('zl').textContent=Math.round(s*100)+'%'}
+W.addEventListener('mousedown',e=>{if(e.target.closest('.card'))return;ip=true;sx=e.clientX-px;sy=e.clientY-py});
+window.addEventListener('mousemove',e=>{if(!ip)return;px=e.clientX-sx;py=e.clientY-sy;at()});
+window.addEventListener('mouseup',()=>ip=false);
+W.addEventListener('wheel',e=>{e.preventDefault();const d=e.deltaY>0?.9:1.1,ns=Math.max(.25,Math.min(3,s*d)),r=W.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;px=mx-(mx-px)*(ns/s);py=my-(my-py)*(ns/s);s=ns;at()},{passive:false});
+function zoomIn(){s=Math.min(3,s*1.25);at()}function zoomOut(){s=Math.max(.25,s*.8);at()}
+function zoomFit(){s=Math.min(W.clientWidth/2450,W.clientHeight/550)*.88;px=30;py=10;at()}
+function dc(){const svg=document.getElementById('svg');
+const L=[[190,315,230,315],[390,315,420,315],[580,315,610,310],[780,310,830,315],[990,315,1040,310],[1220,310,1270,315],[1430,315,1480,310],[1660,310,1710,310],[1890,310,1940,315],[2100,315,2150,315]];
+let h='';L.forEach(l=>{const[x1,y1,x2,y2]=l;const dx=x2-x1;
+h+=`<path d="M${x1},${y1} C${x1+dx*.5},${y1} ${x2-dx*.5},${y2} ${x2},${y2}"/>`;
+const a=Math.atan2(y2-y1,x2-x1);
+h+=`<path d="M${x2},${y2} L${x2-7*Math.cos(a-.4)},${y2-7*Math.sin(a-.4)} M${x2},${y2} L${x2-7*Math.cos(a+.4)},${y2-7*Math.sin(a+.4)}" stroke-width="2"/>`});
+svg.innerHTML=h}dc();zoomFit();
+</script>
+</body>
+</html>
