@@ -26,6 +26,7 @@ description: 유튜브 대본 PD. "영상 만들어줘" 한마디로 레퍼런�
 | DATA_PREP, OUTLINE, DRAFT, REVIEW | + `prompts/genres/{장르}.md` (장르 전문 가이드) |
 | STRATEGY 실행 시 | + `prompts/pd-templates.md` + `prompts/ctr-reference.md` |
 | STRATEGY, OUTLINE (auto 모드) | + `channels/{채널}/config/pd-guide.md` (있으면) |
+| STRATEGY, SCRIPT (profile.md에 `## 구조 템플릿`이 있고 주제가 적합할 때) | + `.claude/skills/{템플릿}/SKILL.md` |
 | 에이전트 호출 직전 (첫 호출 시 1회) | + `prompts/pd-agents.md` |
 
 단계가 바뀌면 이전 단계 파일은 다시 읽지 않는다.
@@ -46,6 +47,25 @@ profile.md의 `## 장르` 값으로 장르 가이드 파일을 결정한다:
 | OUTLINE | §2 서사 구조 가이드 + §5 리텐션 장치 | 장르별 서사 구조, 감정 아크, 리텐션 설계에 반영 |
 | DRAFT | §4 문체 규칙 + §5 리텐션 장치 | script-writer에게 장르별 작법 전달 |
 | REVIEW | §6 검수 체크리스트 | script-reviewer에게 장르별 체크리스트 추가 전달 |
+
+### 구조 템플릿 (선택, `.claude/skills/{템플릿}/SKILL.md`)
+
+장르 가이드가 "어떤 톤·작법으로 쓰나"라면, 구조 템플릿은 "어떤 비트 순서로 쌓나"를 정한다.
+profile.md에 `## 구조 템플릿` 값(스킬 이름)이 있을 때만 사용한다. 현재 등록: `turnaround-docu` (기업 역전 다큐, tech-econ 채널).
+
+1. **적합성 판별 (STRATEGY Step 1)**: 주제 3개를 추천할 때 템플릿 SKILL.md §0 체크를 함께 수행하고, 주제마다 "구조 템플릿 적용 가능/불가"를 표시한다. 사용자가 고른 주제가 불가면 템플릿 없이 기존 흐름대로 진행한다.
+2. **적용 시 전달**:
+
+| 단계 | 참조 섹션 | 전달 대상 |
+|------|----------|----------|
+| DATA_PREP | §5-2 리서치 항목 (숫자 3종 세트, 당시 기사 제목, 경쟁자 약속 vs 실적, 역사 거울 사건) | data-researcher (주제 확정 후 보강 리서치가 필요하면 추가 호출) |
+| STRATEGY | §1 핵심 논지 설계 + §7 메타 템플릿 | strategist — 논지 한 문장·비교축·조어 2개·제목 숫자를 concept.md에 포함 |
+| SCRIPT (OUTLINE) | §2 18비트 구조 + §4 리텐션 체크포인트 | script-writer — outline을 18비트 순서·비중으로 작성 |
+| SCRIPT (DRAFT) | §3 문체 규칙 | script-writer |
+| SCRIPT (REVIEW) | §6 검수 체크리스트 | script-writer 자체검수에 추가 |
+| YOUTUBE_META | §7 메타 템플릿 | PD 직접 |
+
+3. **우선순위**: profile.md(톤앤매너·말투 규칙·콘텐츠 제약·러닝타임) > 장르 가이드 > 구조 템플릿. 예: 채널이 목표주가 언급을 금지하면 템플릿의 "김 빼기" 비트에서 주가·목표가 대신 다른 시장 반응(실적 전망, 업계 평가 등)을 쓴다. 템플릿 비중은 채널 러닝타임에 맞춰 비율로 축소·확대한다.
 
 ---
 
@@ -75,6 +95,7 @@ profile.md의 `## 장르` 값으로 장르 가이드 파일을 결정한다:
 - **러닝타임 가이드**: OUTLINE에서 활용
 - **스토리텔링 특성**: strategist, script-writer에게 전달
 - **리서치 지침**: data-researcher에게 전달
+- **구조 템플릿** (있으면): `.claude/skills/{템플릿}/SKILL.md` 경로 결정 → 위 "구조 템플릿" 절차 따름
 
 ### 모드 결정
 `channels/{채널}/config/workflow.json`의 `mode` 값을 그대로 따른다. **묻지 않는다.**

@@ -67,6 +67,7 @@ strategist 호출 전에 PD가 사용자와 방향을 잡는다.
 
 1. analysis.md + verified-data.md를 바탕으로 **새 콘텐츠 주제 3개 추천**
    - 레퍼런스의 구조·기법·감정 아크를 차용할 수 있는 주제로 선정
+   - profile.md에 `## 구조 템플릿`이 있으면 템플릿 SKILL.md §0으로 각 주제를 판별해 "구조 템플릿 적용 가능/불가"를 함께 표시
 2. **러닝타임 추천**: profile.md 범위(최소~최대) 내에서 추천 + 근거
 3. 사용자가 주제 + 러닝타임 선택
 
@@ -88,6 +89,7 @@ mkdir -p {P}/output/thumbnails
           + 채널 프로필 + `config/pd-guide.md` (있으면)
           + `_script/verified-data.md` 경로
           + `prompts/genres/{장르}.md` (장르 전문 가이드)
+          + 구조 템플릿 SKILL.md 경로 (적용 시) — §1 논지 설계·§7 메타 템플릿 반영, concept.md에 논지 한 문장·비교축·조어 2개·제목 숫자 포함
           + `{P}/_refs/` 경로
           + 사용자 결정 (이야기 주제 + 타겟 러닝타임)
           + 모드 (auto / ask)
@@ -133,6 +135,7 @@ OUTLINE + DRAFT + REVIEW를 하나의 에이전트가 일괄 수행한다.
    - `_script/verified-data.md` 경로
    - 채널 프로필 (`config/profile.md` 경로)
    - 장르 가이드 (`prompts/genres/{장르}.md` 경로)
+   - 구조 템플릿 (적용 시 `.claude/skills/{템플릿}/SKILL.md` 경로) — outline은 §2 비트 구조·비중, draft는 §3 문체, 자체검수에 §6 체크리스트 추가. profile.md 제약이 템플릿보다 우선
    - 검수 체크리스트 (`prompts/script-review-checklist.md` 경로)
    - 검증 기준 (`prompts/draft-verify.md` 경로)
    - outline 템플릿 (`prompts/pd-templates.md` 경로)
